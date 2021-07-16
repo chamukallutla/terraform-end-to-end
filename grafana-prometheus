@@ -1,0 +1,219 @@
+    1  yum install docker
+    2  systemctl start docker
+    3  systemctl enable docker
+    4  curl -L "https://github.com/docker/compose/releases/download/1.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    5  chmod +x /usr/local/bin/docker-compose
+    6  docker-compose --version
+    7  yum install git
+    8  curl -o kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/1.20.4/2021-04-12/bin/linux/amd64/kubectl
+    9  ls -lthr
+   10  echo $PATH
+   11  chmod 755 kubectl
+   12  mv kubectl /usr/local/bin/
+   13  kubectl
+   14  wget https://releases.hashicorp.com/terraform/1.0.1/terraform_1.0.1_linux_amd64.zip
+   15  unzip terraform_1.0.1_linux_amd64.zip
+   16  rm -rf terraform_1.0.1_linux_amd64.zip
+   17  mv terraform /usr/local/bin/
+   18  terraform -version
+   19    git clone https://github.com/hashicorp/learn-terraform-provision-eks-cluster
+   20  ls -lthr
+   21  cd learn-terraform-provision-eks-cluster/
+   22  ls -lthr
+   23  terraform init
+   24  terraform init -upgrade
+   25  terraform plan
+   26  terraform apply
+   27  cd
+   28  pwd
+   29  mkdir .kube
+   30  vi config
+   31  kubectl get nodes
+   32  curl -o aws-iam-authenticator https://amazon-eks.s3.us-west-2.amazonaws.com/1.19.6/2021-01-05/bin/linux/amd64/aws-iam-authenticator
+   33  chmod 755  aws-iam-authenticator
+   34  mv aws-iam-authenticator /usr/local/bin/
+   35  kubectl get nodes
+   36  ls -lthr
+   37  mv congig /root/.kube/
+   38  ls -ltra
+   39  cat config
+   40  cd .kube
+   41  vi config
+   42  cd ..
+   43  kubectl get nodes
+   44  kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-0.32.0/deploy/static/provider/aws/deploy.yaml
+   45  kubectl get ns
+   46  pwd
+   47  ls -ltr
+   48  ls -ltra
+   49  kubens
+   50  kubectl get nodes
+   51  kubectl get ns
+   52  kubectl get po jquery
+   53  kubectl get po -n jquery
+   54  kubectl get all -n jquery
+   55  kubectl get po -A
+   56  kubectl get svc -A
+   57   kubectl get deployments -n jquery
+   58   kubectl get deployments -n jquery -o wide
+   59  cd learn-terraform-provision-eks-cluster/
+   60  ls -lthr
+======================================================  
+   vi rds.tf
+
+
+resource "aws_db_subnet_group" "education1" {
+  name       = "education1"
+  subnet_ids = module.vpc.private_subnets
+
+  tags = {
+    Name = "Education"
+  }
+}
+resource "aws_db_instance" "mysql" {
+  allocated_storage    = 10
+  engine               = "mysql"
+  engine_version       = "5.7"
+  instance_class       = "db.t3.micro"
+  name                 = "mydb"
+  username             = "mahinaidu"
+  password             = "9573972811Mahi"
+  parameter_group_name = "default.mysql5.7"
+  skip_final_snapshot  = true
+  db_subnet_group_name   = aws_db_subnet_group.education1.name
+}
+
+
+     ls -lthr
+  
+     terraform plan
+     
+     terraform apply      ----you get same config file content
+
+===========================================================
+
+install helm-----for installing the group of instructions---browse the link---https://www.eksworkshop.com/beginner/060_helm/helm_intro/install/index.html
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    curl -sSL https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+
+     
+
+     helm version
+     
+     helm list
+=================================
+install prometheus to node
+----------------------------------------
+
+
+     helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+
+add helm charts to prometheus
+======================
+
+     helm repo add grafana https://grafana.github.io/helm-charts
+
+create name space for prometheus
+---------------------------------------------------
+
+     kubectl create namespace prometheus
+
+
+helm install prometheus prometheus-community/prometheus \
+    --namespace prometheus \
+    --set alertmanager.persistentVolume.storageClass="gp2" \
+    --set server.persistentVolume.storageClass="gp2"
+
+
+     kubectl get po -n prometheus
+     kubectl get svc -n prometheus
+
+
+     vi prometheus.yml
+
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+ name: prometheus-ingress
+ namespace: prometheus
+spec:
+ rules:
+ - host: prometheus.kkmn.info
+   http:
+     paths:
+     - path:
+       backend:
+         serviceName: prometheus-server
+         servicePort: 80
+
+ 
+
+    kubectl apply -f prometheus.yml
+
+     kubectl get ing -n prometheus
+
+     nslookup prometheus.kkmn.info
+
+     create grafana directory
+----------------------------------------------------
+    mkdir -p ${HOME}/environment/grafana
+
+cat << EoF > ${HOME}/environment/grafana/grafana.yaml
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+    - name: Prometheus
+      type: prometheus
+      url: http://prometheus-server.prometheus.svc.cluster.local
+      access: proxy
+      isDefault: true
+EoF
+
+
+create grafana name space
+------------------------------------------
+   
+ kubectl create namespace grafana
+
+  
+helm install grafana grafana/grafana \
+    --namespace grafana \
+    --set persistence.storageClassName="gp2" \
+    --set persistence.enabled=true \
+    --set adminPassword='EKS!sAWSome' \
+    --values ${HOME}/environment/grafana/grafana.yaml 
+
+
+  kubectl get po -n grafana
+
+    kubectl get svc -n grafana
+
+
+   vi grafana.yml
+
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+ name: grafana-ingress
+ namespace: grafana
+spec:
+ rules:
+ - host: grafana.kkmn.info
+   http:
+     paths:
+     - path:
+       backend:
+         serviceName: grafana
+         servicePort: 80
+
+
+    kubectl apply -f grafana.yml
+
+    kubectl get ing -n grafana
+
+    nslookup grafana.chamu.xyz
+
+   
+ 
+  
